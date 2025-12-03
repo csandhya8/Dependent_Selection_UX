@@ -1,0 +1,6 @@
+
+{
+  "dev":  ["svc-a", "svc-b"],
+  "qa":   ["svc-a", "svc-c"],
+  "prod": ["svc-a", "svc-b", "svc-c"]
+}
