@@ -1,1 +1,40 @@
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        type: choice
+        options: [dev, qa, prod]
+        required: true
+      service:
+        type: choice
+        options: [svc-a, svc-b, svc-c]
+        required: true
+      version:
+        type: string
+        required: true
 
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate combo (fail fast)
+        shell: bash
+        run: |
+          set -euo pipefail
+          env="${{ github.event.inputs.env }}"
+          svc="${{ github.event.inputs.service }}"
+          allowed=$(jq -r --arg env "$env" '.[$env] // empty | join(",")' config/deploy-matrix.json)
+          [[ -n "$allowed" ]] || { echo "::error::Unknown env '$env'"; exit 1; }
+          IFS=',' read -r -a arr <<< "$allowed"
+          ok="false"; for x in "${arr[@]}"; do [[ "$x" == "$svc" ]] && ok="true"; done
+          [[ "$ok" == "true" ]] || { echo "::error::Invalid combo $env/$svc. Allowed: $allowed"; exit 1; }
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [validate]
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Deploying ${{ github.event.inputs.env }} / ${{ github.event.inputs.service }} / ${{ github.event.inputs.version }}"
+      # your real deployment steps here
